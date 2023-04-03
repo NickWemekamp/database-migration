@@ -1,0 +1,18 @@
+{
+    "connector.class" : "io.debezium.connector.oracle.OracleConnector",
+    "tasks.max" : "1",
+    "topic.prefix" : "cdc_sonarqube",
+    "database.hostname" : "oracle_db",
+    "database.port" : "1521",
+    "database.user" : "c##sonar",
+    "database.password" : "sonar",
+    "database.dbname" : "ORCLCDB",
+    "database.pdb.name" : "ORCLPDB1",
+    "schema.history.internal.kafka.bootstrap.servers" : "kafka:9092",
+    "schema.history.internal.kafka.topic": "schema-changes.oracle_db_sonarqube",
+    "converters": "boolean",
+    "boolean.type": "io.debezium.connector.oracle.converters.NumberOneToBooleanConverter",
+    "boolean.selector": ".*.SUMMARY_COMMENT_ENABLED,.*.MONOREPO,.*.IS_EMPTY,.*.MAIN_IS_LAST,.*.IS_LAST,.*.PRIVATE,.*.B_CHANGED,.*.B_ENABLED,.*.ENABLED,.*.IS_EMPTY,.*.MANUAL_SEVERITY,.*.FROM_HOTSPOT,.*.OPTIMIZED_BEST_VALUE,.*.HIDDEN,.*.DELETE_HISTORICAL_DATA,.*.QUALITATIVE,.*.ENABLED,.*.WITH_PROJECT_CREATOR,.*.NEED_ISSUE_SYNC,.*.EXCLUDE_FROM_PURGE,.*.PRIVATE,.*.IS_EMPTY,.*.IS_BUILT_IN,.*.IS_AD_HOC,.*.IS_EXTERNAL,.*.IS_TEMPLATE,.*.IS_BUILT_IN,.*.ISLAST,.*.USER_LOCAL,.*.RESET_PASSWORD,.*.ACTIVE,.*.SUCCESS,.*.REMOVED,.*.PRIVATE,.*.QUICK_FIX_AVAILABLE,.*.USER_TRIGGERED",
+    "time.precision.mode": "connect",
+    "offsets.storage.topic": "offsets_sonarqube"
+}

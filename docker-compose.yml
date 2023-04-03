@@ -1,0 +1,160 @@
+version: '2.16'
+services:
+  # === Oracle and sonarqube ====
+  oracle_db:
+    image: container-registry.oracle.com/database/enterprise:latest
+    environment:
+      - ORACLE_SID=ORCLCDB
+      - ORACLE_PDB=ORCLPDB1
+      - ORACLE_PWD=Oracle_123
+    volumes:
+      - oracle-db:/opt/oracle/oradata
+    ports:
+      - "1521:1521"
+    networks:
+      - cdc_network
+    healthcheck:
+      test: [ "CMD", "sqlplus", "-L", "sys/Oracle_123@//localhost:1521/ORCLCDB as sysdba" ]
+      interval: 10s
+      timeout: 10s
+      retries: 50
+  sonarqube_oracle:
+    build:
+      context: sonarqube_with_oracle_jdbc
+    depends_on:
+      oracle_db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:oracle:thin:@oracle_db:1521/ORCLPDB1
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+    volumes:
+      - sonarqube_oracle_data:/opt/sonarqube/data
+      - sonarqube_oracle_logs:/opt/sonarqube/logs
+    ports:
+      - "8000:9000"
+    networks:
+      - cdc_network
+
+  # === Postgres and sonarqube ====
+  sonarqube_postgres:
+    image: sonarqube:community
+    depends_on:
+      postgres_db:
+        condition: service_started
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://postgres_db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+    volumes:
+      - sonarqube_postgres_data:/opt/sonarqube/data
+      - sonarqube_postgres_logs:/opt/sonarqube/logs
+    ports:
+      - "9000:9000"
+    networks:
+      - cdc_network
+  postgres_db:
+    image: postgres:15.2
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cdc_network
+
+  # =========== CDC ==============
+  zookeeper:
+    image: quay.io/debezium/zookeeper:2.2
+    ports:
+      - 2181:2181
+      - 2888:2888
+      - 3888:3888
+    networks:
+      - cdc_network
+    volumes:
+      - zookeeper_data:/zookeeper/data
+      - zookeeper_txns:/zookeeper/txns
+  kafka:
+    image: quay.io/debezium/kafka:2.2
+    ports:
+      - 9092:9092
+    networks:
+      - cdc_network
+    environment:
+      ZOOKEEPER_CONNECT: zookeeper:2181
+    volumes:
+      - "kafka_data:/kafka/data"
+    depends_on:
+      zookeeper:
+        condition: service_started
+  kpow:
+    image: factorhouse/kpow-ce
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      connect:
+        condition: service_started
+    environment:
+      BOOTSTRAP: kafka:9092
+      CONNECT_REST_URL: http://connect:8083
+      ALLOW_KPOW_ADMIN: true
+      ALLOW_TOPIC_INSPECT: true
+      ALLOW_TOPIC_PRODUCE: true
+      ALLOW_TOPIC_CREATE: true
+      ALLOW_TOPIC_EDIT: true
+      ALLOW_TOPIC_DELETE: true
+      ALLOW_TOPIC_TRUNCATE: true
+      ALLOW_GROUP_EDIT: true
+      ALLOW_BROKER_EDIT: true
+      ALLOW_ACL_EDIT: true
+      ALLOW_SCHEMA_CREATE: true
+      ALLOW_SCHEMA_EDIT: true
+      ALLOW_CONNECT_CREATE: true
+      ALLOW_CONNECT_EDIT: true
+      ALLOW_CONNECT_INSPECT: true
+      ALLOW_BULK_ACTION: true
+
+    mem_limit: 1G
+    networks:
+      - cdc_network
+  connect:
+    build:
+      context: debezium-with-oracle-jdbc
+    ports:
+      - 8083:8083
+      - 5005:5005
+    networks:
+      - cdc_network
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      STATUS_STORAGE_TOPIC: connect_statuses
+      LD_LIBRARY_PATH: /instant_client
+volumes:
+  oracle-db:
+  postgresql_data:
+
+  sonarqube_oracle_data:
+  sonarqube_oracle_logs:
+
+  sonarqube_postgres_data:
+  sonarqube_postgres_logs:
+
+  kafka_data:
+
+  zookeeper_data:
+  zookeeper_txns:
+
+
+networks:
+  cdc_network:
+    name: cdc_network
+
+
