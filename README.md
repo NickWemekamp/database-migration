@@ -53,6 +53,7 @@ alter database open;
 -- Should now "Database log mode: Archive Mode"
 archive log list
 
+alter database add supplemental log data;
 alter database add supplemental log data (primary key, unique) columns;
 select SUPPLEMENTAL_LOG_DATA_MIN MIN, SUPPLEMENTAL_LOG_DATA_PK PK, SUPPLEMENTAL_LOG_DATA_UI UI, SUPPLEMENTAL_LOG_DATA_ALL ALL_LOG from v$database;
 ```

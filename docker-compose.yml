@@ -38,7 +38,7 @@ services:
 
   # === Postgres and sonarqube ====
   sonarqube_postgres:
-    image: sonarqube:community
+    image: sonarqube:9.9.0-community
     depends_on:
       postgres_db:
         condition: service_started
